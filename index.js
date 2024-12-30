@@ -3,7 +3,7 @@ const app = express();
 require("dotenv").config();
 const cors = require("cors");
 const path = require("path");
-const { connectDB } = require("./config/connectDB");
+const connectDB = require("./config/connectDB");
 const paymentRoutes = require("./routes/paymentRoutes");
 const userRoutes = require("./routes/userRoutes");
 const jwtRoutes = require("./routes/tokenRoutes");
@@ -12,14 +12,8 @@ const fileRoutes = require("./routes/fileRoutes");
 const port = process.env.PORT || 5000;
 
 const corsOptions = {
-  origin: [
-    "http://localhost:5173",
-    "https://client-rho-liard-42.vercel.app",
-    "https://server-teal-one-13.vercel.app",
-  ],
+  origin: ["http://localhost:5173"],
   credentials: true,
-  allowedHeaders: ["Content-Type", "Authorization"],
-  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
 };
 
 app.use(cors(corsOptions));
@@ -42,4 +36,8 @@ app.use("/", fileRoutes);
 // Root Endpoint
 app.get("/", (req, res) => {
   res.status(200).json("Server is running...");
+});
+
+app.listen(port, () => {
+  console.log(`Server is running on port http://localhost:${port}`);
 });
