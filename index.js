@@ -12,7 +12,7 @@ const fileRoutes = require("./routes/fileRoutes");
 const port = process.env.PORT || 5000;
 
 const corsOptions = {
-  origin: ["http://localhost:5173", "https://brandnasu.vercel.app/"],
+  origin: ["http://localhost:5173", "https://brandnasu-54c3a.web.app"],
   credentials: true,
 };
 
