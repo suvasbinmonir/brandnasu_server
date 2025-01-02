@@ -1,155 +1,56 @@
-const multer = require("multer");
-const path = require("path");
-const fs = require("fs");
+const { S3Client, PutObjectCommand } = require("@aws-sdk/client-s3");
 const File = require("../models/fileModel");
+const fs = require("fs");
+require("dotenv").config();
 
-// Configure multer storage
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    const uploadPath = path.join(__dirname, "../uploads");
-    if (!fs.existsSync(uploadPath)) {
-      fs.mkdirSync(uploadPath);
-    }
-    cb(null, uploadPath);
-  },
-  filename: (req, file, cb) => {
-    cb(null, `${Date.now()}-${file.originalname}`);
+// Initialize S3 client
+const s3Client = new S3Client({
+  endpoint: process.env.R2_ENDPOINT,
+  region: "auto",
+  credentials: {
+    accessKeyId: process.env.R2_ACCESS_KEY_ID,
+    secretAccessKey: process.env.R2_SECRET_ACCESS_KEY,
   },
 });
 
-const fileFilter = (req, file, cb) => {
-  if (file.mimetype.startsWith("image/")) {
-    cb(null, true);
-  } else {
-    cb(new Error("Only image files are allowed!"), false);
+// Upload file to R2
+exports.uploadFile = async (req, res) => {
+  const file = req.file;
+
+  if (!file) {
+    return res.status(400).json({ message: "No file uploaded" });
   }
-};
 
-const upload = multer({ storage, fileFilter }).single("file");
+  const bucketName = process.env.R2_BUCKET_NAME;
+  const key = file.filename; // Use the uploaded filename
 
-// Controller function for uploading a file
-const uploadFile = (req, res) => {
-  upload(req, res, async (err) => {
-    if (err) {
-      return res.status(400).json({ error: err.message });
-    }
-    if (!req.file) {
-      return res
-        .status(400)
-        .json({ error: "No file uploaded or invalid file format." });
-    }
-
-    const { filename, originalname, mimetype, size } = req.file;
-
-    try {
-      // Save file details to the database
-      const newFile = new File({ filename, originalname, mimetype, size });
-      await newFile.save();
-
-      const fileUrl = `https://brandnasu-server.vercel.app/uploads/${filename}`;
-      res.status(201).json({
-        message: "File uploaded successfully!",
-        file: {
-          name: originalname,
-          url: fileUrl,
-        },
-      });
-    } catch (error) {
-      res
-        .status(500)
-        .json({ error: "Error saving file details to the database." });
-    }
-  });
-};
-
-// Controller function to get uploaded files (optional)
-const getFiles = async (req, res) => {
   try {
-    const files = await File.find();
-    res.status(200).json(files);
-  } catch (error) {
-    res.status(500).json({ error: "Error fetching files from the database." });
+    // Upload to R2
+    const fileStream = fs.createReadStream(file.path);
+    const command = new PutObjectCommand({
+      Bucket: bucketName,
+      Key: file.originalname,
+      Body: fileStream,
+      ContentType: file.mimetype,
+    });
+
+    await s3Client.send(command);
+
+    const fileUrl = `${process.env.R2_ENDPOINT_DEV}/${file.originalname}`;
+
+    console.log(fileUrl, "getting image url");
+
+    // Save to MongoDB
+    const savedFile = await File.create({ filename: key, url: fileUrl });
+
+    // Remove local file
+    fs.unlinkSync(file.path);
+
+    res
+      .status(201)
+      .json({ message: "File uploaded successfully", file: savedFile });
+  } catch (err) {
+    console.error("Error uploading file:", err);
+    res.status(500).json({ message: "File upload failed", error: err.message });
   }
 };
-
-module.exports = { uploadFile, getFiles };
-
-// const multer = require("multer");
-// const path = require("path");
-// const fs = require("fs");
-// const File = require("../models/fileModel");
-
-// // Configure multer storage
-// const storage = multer.diskStorage({
-//   destination: (req, file, cb) => {
-//     const uploadPath = path.join(__dirname, "../uploads");
-//     if (!fs.existsSync(uploadPath)) {
-//       fs.mkdirSync(uploadPath);
-//     }
-//     cb(null, uploadPath);
-//   },
-//   filename: (req, file, cb) => {
-//     cb(null, `${Date.now()}-${file.originalname}`);
-//   },
-// });
-
-// // File filter for images only
-// const fileFilter = (req, file, cb) => {
-//   if (file.mimetype.startsWith("image/")) {
-//     cb(null, true);
-//   } else {
-//     cb(new Error("Only image files are allowed!"), false);
-//   }
-// };
-
-// // Set up multer
-// const upload = multer({ storage, fileFilter }).single("file");
-
-// // Controller function for uploading a file
-// const uploadFile = (req, res) => {
-//   upload(req, res, async (err) => {
-//     if (err) {
-//       return res.status(400).json({ error: err.message });
-//     }
-
-//     if (!req.file) {
-//       return res
-//         .status(400)
-//         .json({ error: "No file uploaded or invalid file format." });
-//     }
-
-//     const { filename } = req.file;
-
-//     try {
-//       // Construct the file URL
-//       const imageUrl = `https://brandnasu-server.vercel.app/uploads/${filename}`;
-
-//       // Save only the image URL to the database
-//       const newFile = new File({ imageUrl });
-//       await newFile.save();
-
-//       res.status(201).json({
-//         message: "File uploaded successfully!",
-//         file: {
-//           url: imageUrl,
-//         },
-//       });
-//     } catch (error) {
-//       res
-//         .status(500)
-//         .json({ error: "Error saving image URL to the database." });
-//     }
-//   });
-// };
-
-// // Controller function to get uploaded files
-// const getFiles = async (req, res) => {
-//   try {
-//     const files = await File.find();
-//     res.status(200).json(files);
-//   } catch (error) {
-//     res.status(500).json({ error: "Error fetching files from the database." });
-//   }
-// };
-
-// module.exports = { uploadFile, getFiles };

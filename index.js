@@ -28,7 +28,7 @@ connectDB();
 app.options("*", cors(corsOptions));
 
 // Routes
-app.use("/api", paymentRoutes);
+app.use("/", paymentRoutes);
 app.use("/", userRoutes);
 app.use("/", jwtRoutes);
 app.use("/", fileRoutes);

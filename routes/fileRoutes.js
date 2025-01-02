@@ -1,11 +1,13 @@
 const express = require("express");
+const multer = require("multer");
+const { uploadFile } = require("../controllers/fileController");
+
 const router = express.Router();
-const { uploadFile, getFiles } = require("../controllers/fileController");
+
+// Configure multer for local uploads
+const upload = multer({ dest: "uploads/" });
 
 // File upload route
-router.post("/upload", uploadFile);
-
-// (Optional) Route to fetch all uploaded files
-router.get("/files", getFiles);
+router.post("/upload", upload.single("file"), uploadFile);
 
 module.exports = router;
