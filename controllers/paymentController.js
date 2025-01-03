@@ -1,4 +1,4 @@
-const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
 const Payment = require("../models/Payment");
 
 /**
@@ -16,8 +16,8 @@ const createPaymentIntent = async (req, res) => {
 
     const paymentIntent = await stripe.paymentIntents.create({
       amount,
-      currency: 'usd',
-      payment_method_types: ['card'],
+      currency: "usd",
+      payment_method_types: ["card"],
     });
 
     res.status(200).json({ clientSecret: paymentIntent.client_secret });
@@ -26,7 +26,6 @@ const createPaymentIntent = async (req, res) => {
     res.status(500).json({ error: "Internal Server Error" });
   }
 };
-
 
 /**
  * Controller function to store payment information
@@ -55,7 +54,9 @@ const storePayment = async (req, res) => {
       typeof amount !== "number" ||
       amount <= 0
     ) {
-      return res.status(400).json({ error: "Missing or invalid payment details." });
+      return res
+        .status(400)
+        .json({ error: "Missing or invalid payment details." });
     }
 
     // Save the payment in the database
@@ -73,7 +74,9 @@ const storePayment = async (req, res) => {
 
     await payment.save(); // Save to the database
 
-    res.status(201).json({ message: "Payment recorded successfully.", payment });
+    res
+      .status(201)
+      .json({ message: "Payment recorded successfully.", payment });
   } catch (error) {
     console.error("Error storing payment:", error.message);
 
@@ -124,11 +127,18 @@ const deletePayment = async (req, res) => {
       return res.status(404).json({ error: "Payment not found." });
     }
 
-    res.status(200).json({ message: "Payment deleted successfully", deletedPayment });
+    res
+      .status(200)
+      .json({ message: "Payment deleted successfully", deletedPayment });
   } catch (error) {
     console.error("Error deleting payment:", error.message);
     res.status(500).json({ error: "Failed to delete payment." });
   }
 };
 
-module.exports = { createPaymentIntent, storePayment, getAllPayments, deletePayment };
+module.exports = {
+  createPaymentIntent,
+  storePayment,
+  getAllPayments,
+  deletePayment,
+};
